@@ -13,7 +13,7 @@
 
 <div class="container">
     <div class="row" id="app">
-        <message></message>
+        <message username={{Auth::user()->name}}></message>
     </div>
 </div>
 

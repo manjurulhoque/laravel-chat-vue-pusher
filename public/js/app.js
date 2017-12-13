@@ -47894,6 +47894,10 @@ if (false) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
+function injectStyle (ssrContext) {
+  if (disposed) return
+  __webpack_require__(57)
+}
 var normalizeComponent = __webpack_require__(9)
 /* script */
 var __vue_script__ = __webpack_require__(45)
@@ -47902,7 +47906,7 @@ var __vue_template__ = __webpack_require__(46)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
-var __vue_styles__ = null
+var __vue_styles__ = injectStyle
 /* scopeId */
 var __vue_scopeId__ = null
 /* moduleIdentifier (server only) */
@@ -47961,22 +47965,100 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 /* harmony default export */ __webpack_exports__["default"] = ({
+    props: ['username'],
     data: function data() {
         return {
             message: '',
+            name: '',
+            typing: '',
             chat: {
-                messages: []
+                messages: [],
+                align: [],
+                color: [],
+                user: []
             }
         };
     },
 
     methods: {
         send: function send() {
-            this.chat.messages.push(this.message);
-            this.message = "";
+            var _this = this;
+
+            this.chat.messages.push(this.$data.message);
+            this.chat.align.push('left');
+            this.chat.color.push('list-group-item-success');
+            this.chat.user.push('me');
+
+            axios.post('/send', {
+                message: this.message
+            }).then(function (response) {
+                //                        console.log(response);
+                _this.message = "";
+            }).catch(function (error) {
+                console.log(error);
+            });
         }
+    },
+    watch: {
+        message: function message() {
+            Echo.private('chat').whisper('typing', {
+                message: this.message
+            });
+        }
+    },
+    mounted: function mounted() {
+        var _this2 = this;
+
+        Echo.private('chat').listen('ChatEvent', function (e) {
+            //                    console.log(e.message);
+            _this2.chat.messages.push(e.message);
+            _this2.chat.align.push('right');
+            _this2.chat.color.push('list-group-item-warning');
+            _this2.chat.user.push(e.user.name);
+            _this2.$data.name = e.user.name;
+        }).listenForWhisper('typing', function (e) {
+            //                    console.log(e);
+            if (e.message !== '') {
+                _this2.typing = _this2.username + ' is typing...';
+            } else {
+                _this2.typing = '';
+            }
+        });
     }
 });
 
@@ -47989,55 +48071,47 @@ var render = function() {
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c("div", [
-    _c(
-      "ul",
-      { staticClass: "list-group" },
-      [
-        _c("li", { staticClass: "list-group-item active" }, [
-          _vm._v("Chat room")
-        ]),
-        _vm._v(" "),
-        _vm._l(_vm.chat.messages, function(message) {
-          return _c("li", { staticClass: "list-group-item" }, [
-            _vm._v("\n            " + _vm._s(message) + "\n            "),
-            _c("small", { staticClass: "badge badge-danger" }, [_vm._v("You")])
-          ])
-        })
-      ],
-      2
-    ),
-    _vm._v(" "),
-    _c("div", { staticClass: "input-group" }, [
-      _c("input", {
-        directives: [
-          {
-            name: "model",
-            rawName: "v-model",
-            value: _vm.message,
-            expression: "message"
-          }
-        ],
-        staticClass: "form-control",
-        attrs: { type: "text", placeholder: "type your message" },
-        domProps: { value: _vm.message },
-        on: {
-          input: function($event) {
-            if ($event.target.composing) {
-              return
-            }
-            _vm.message = $event.target.value
-          }
-        }
-      }),
+    _c("div", { staticClass: "chat_window" }, [
+      _vm._m(0, false, false),
       _vm._v(" "),
-      _c("span", { staticClass: "input-group-btn" }, [
-        _c(
-          "button",
-          {
-            staticClass: "btn btn-primary",
-            attrs: { type: "button" },
+      _c(
+        "ul",
+        { staticClass: "messages" },
+        _vm._l(_vm.chat.messages, function(message, index) {
+          return _c(
+            "li",
+            { staticClass: "message", class: _vm.chat.align[index] },
+            [
+              _c("div", { staticClass: "avatar" }),
+              _vm._v(" "),
+              _c("div", { staticClass: "text_wrapper" }, [
+                _vm._v(
+                  "\n                    " +
+                    _vm._s(_vm.chat.user[index]) +
+                    "\n                    "
+                ),
+                _c("div", { staticClass: "text" }, [_vm._v(_vm._s(message))])
+              ])
+            ]
+          )
+        })
+      ),
+      _vm._v(" "),
+      _c("div", { staticClass: "bottom_wrapper clearfix" }, [
+        _c("div", { staticClass: "message_input_wrapper" }, [
+          _c("input", {
+            directives: [
+              {
+                name: "model",
+                rawName: "v-model",
+                value: _vm.message,
+                expression: "message"
+              }
+            ],
+            staticClass: "message_input",
+            attrs: { placeholder: "Type your message here..." },
+            domProps: { value: _vm.message },
             on: {
-              click: _vm.send,
               keyup: function($event) {
                 if (
                   !("button" in $event) &&
@@ -48046,16 +48120,48 @@ var render = function() {
                   return null
                 }
                 _vm.send($event)
+              },
+              input: function($event) {
+                if ($event.target.composing) {
+                  return
+                }
+                _vm.message = $event.target.value
               }
             }
-          },
-          [_vm._v("Send")]
-        )
+          })
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "send_message" }, [
+          _c("div", { staticClass: "icon" }),
+          _vm._v(" "),
+          _c("div", { staticClass: "text", on: { click: _vm.send } }, [
+            _vm._v("Send")
+          ])
+        ]),
+        _vm._v(" "),
+        _vm.typing ? _c("h5", [_vm._v(_vm._s(_vm.typing))]) : _vm._e()
       ])
     ])
   ])
 }
-var staticRenderFns = []
+var staticRenderFns = [
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c("div", { staticClass: "top_menu" }, [
+      _c("div", { staticClass: "buttons" }, [
+        _c("div", { staticClass: "button close" }),
+        _vm._v(" "),
+        _c("div", { staticClass: "button minimize" }),
+        _vm._v(" "),
+        _c("div", { staticClass: "button maximize" })
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "title" }, [_vm._v("Chat")])
+    ])
+  }
+]
 render._withStripped = true
 module.exports = { render: render, staticRenderFns: staticRenderFns }
 if (false) {
@@ -48070,6 +48176,390 @@ if (false) {
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
+
+/***/ }),
+/* 48 */,
+/* 49 */
+/***/ (function(module, exports) {
+
+/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+// css base code, injected by the css-loader
+module.exports = function(useSourceMap) {
+	var list = [];
+
+	// return the list of modules as css string
+	list.toString = function toString() {
+		return this.map(function (item) {
+			var content = cssWithMappingToString(item, useSourceMap);
+			if(item[2]) {
+				return "@media " + item[2] + "{" + content + "}";
+			} else {
+				return content;
+			}
+		}).join("");
+	};
+
+	// import a list of modules into the list
+	list.i = function(modules, mediaQuery) {
+		if(typeof modules === "string")
+			modules = [[null, modules, ""]];
+		var alreadyImportedModules = {};
+		for(var i = 0; i < this.length; i++) {
+			var id = this[i][0];
+			if(typeof id === "number")
+				alreadyImportedModules[id] = true;
+		}
+		for(i = 0; i < modules.length; i++) {
+			var item = modules[i];
+			// skip already imported module
+			// this implementation is not 100% perfect for weird media query combinations
+			//  when a module is imported multiple times with different media queries.
+			//  I hope this will never occur (Hey this way we have smaller bundles)
+			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
+				if(mediaQuery && !item[2]) {
+					item[2] = mediaQuery;
+				} else if(mediaQuery) {
+					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
+				}
+				list.push(item);
+			}
+		}
+	};
+	return list;
+};
+
+function cssWithMappingToString(item, useSourceMap) {
+	var content = item[1] || '';
+	var cssMapping = item[3];
+	if (!cssMapping) {
+		return content;
+	}
+
+	if (useSourceMap && typeof btoa === 'function') {
+		var sourceMapping = toComment(cssMapping);
+		var sourceURLs = cssMapping.sources.map(function (source) {
+			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
+		});
+
+		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
+	}
+
+	return [content].join('\n');
+}
+
+// Adapted from convert-source-map (MIT)
+function toComment(sourceMap) {
+	// eslint-disable-next-line no-undef
+	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
+	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
+
+	return '/*# ' + data + ' */';
+}
+
+
+/***/ }),
+/* 50 */,
+/* 51 */,
+/* 52 */,
+/* 53 */,
+/* 54 */,
+/* 55 */,
+/* 56 */,
+/* 57 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(58);
+if(typeof content === 'string') content = [[module.i, content, '']];
+if(content.locals) module.exports = content.locals;
+// add the styles to the DOM
+var update = __webpack_require__(59)("c105b46a", content, false);
+// Hot Module Replacement
+if(false) {
+ // When the styles change, update the <style> tags
+ if(!content.locals) {
+   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-37652940\",\"scoped\":false,\"hasInlineConfig\":true}!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./Message.vue", function() {
+     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-37652940\",\"scoped\":false,\"hasInlineConfig\":true}!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./Message.vue");
+     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+     update(newContent);
+   });
+ }
+ // When the module is disposed, remove the <style> tags
+ module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 58 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(49)(undefined);
+// imports
+
+
+// module
+exports.push([module.i, "\n* {\n    -webkit-box-sizing: border-box;\n            box-sizing: border-box;\n}\nbody {\n    background-color: #edeff2;\n    font-family: \"Calibri\", \"Roboto\", sans-serif;\n}\n.chat_window {\n    margin-top: 100px;\n    position: absolute;\n    width: calc(100% - 20px);\n    max-width: 800px;\n    height: 500px;\n    border-radius: 10px;\n    background-color: #fff;\n    left: 50%;\n    top: 50%;\n    -webkit-transform: translateX(-50%) translateY(-50%);\n            transform: translateX(-50%) translateY(-50%);\n    -webkit-box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);\n            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);\n    background-color: #f8f8f8;\n    overflow: hidden;\n}\n.top_menu {\n    background-color: #fff;\n    width: 100%;\n    padding: 20px 0 15px;\n    -webkit-box-shadow: 0 1px 30px rgba(0, 0, 0, 0.1);\n            box-shadow: 0 1px 30px rgba(0, 0, 0, 0.1);\n}\n.top_menu .buttons {\n    margin: 3px 0 0 20px;\n    position: absolute;\n}\n.top_menu .buttons .button {\n    width: 16px;\n    height: 16px;\n    border-radius: 50%;\n    display: inline-block;\n    margin-right: 10px;\n    position: relative;\n}\n.top_menu .buttons .button.close {\n    background-color: #f5886e;\n}\n.top_menu .buttons .button.minimize {\n    background-color: #fdbf68;\n}\n.top_menu .buttons .button.maximize {\n    background-color: #a3d063;\n}\n.top_menu .title {\n    text-align: center;\n    color: #bcbdc0;\n    font-size: 20px;\n}\n.messages {\n    position: relative;\n    list-style: none;\n    padding: 20px 10px 0 10px;\n    margin: 0;\n    height: 347px;\n    overflow: scroll;\n}\n.messages .message {\n    clear: both;\n    overflow: hidden;\n    margin-bottom: 20px;\n    -webkit-transition: all 0.5s linear;\n    transition: all 0.5s linear;\n}\n.messages .message.left .avatar {\n    background-color: #f5886e;\n    float: left;\n}\n.messages .message.left .text_wrapper {\n    background-color: #ffe6cb;\n    margin-left: 20px;\n}\n.messages .message.left .text_wrapper::after, .messages .message.left .text_wrapper::before {\n    right: 100%;\n    border-right-color: #ffe6cb;\n}\n.messages .message.left .text {\n    color: #c48843;\n}\n.messages .message.right .avatar {\n    background-color: #fdbf68;\n    float: right;\n}\n.messages .message.right .text_wrapper {\n    background-color: #c7eafc;\n    margin-right: 20px;\n    float: right;\n}\n.messages .message.right .text_wrapper::after, .messages .message.right .text_wrapper::before {\n    left: 100%;\n    border-left-color: #c7eafc;\n}\n.messages .message.right .text {\n    color: #45829b;\n}\n.messages .message.appeared {\n    opacity: 1;\n}\n.messages .message .avatar {\n    width: 60px;\n    height: 60px;\n    border-radius: 50%;\n    display: inline-block;\n}\n.messages .message .text_wrapper {\n    display: inline-block;\n    padding: 20px;\n    border-radius: 6px;\n    width: calc(100% - 85px);\n    min-width: 100px;\n    position: relative;\n}\n.messages .message .text_wrapper::after, .messages .message .text_wrapper:before {\n    top: 18px;\n    border: solid transparent;\n    content: \" \";\n    height: 0;\n    width: 0;\n    position: absolute;\n    pointer-events: none;\n}\n.messages .message .text_wrapper::after {\n    border-width: 13px;\n    margin-top: 0px;\n}\n.messages .message .text_wrapper::before {\n    border-width: 15px;\n    margin-top: -2px;\n}\n.messages .message .text_wrapper .text {\n    font-size: 18px;\n    font-weight: 300;\n}\n.bottom_wrapper {\n    position: relative;\n    width: 100%;\n    background-color: #fff;\n    padding: 20px 20px;\n    position: absolute;\n    bottom: 0;\n}\n.bottom_wrapper .message_input_wrapper {\n    display: inline-block;\n    height: 50px;\n    border-radius: 25px;\n    border: 1px solid #bcbdc0;\n    width: calc(100% - 160px);\n    position: relative;\n    padding: 0 20px;\n}\n.bottom_wrapper .message_input_wrapper .message_input {\n    border: none;\n    height: 100%;\n    -webkit-box-sizing: border-box;\n            box-sizing: border-box;\n    width: calc(100% - 40px);\n    position: absolute;\n    outline-width: 0;\n    color: gray;\n}\n.bottom_wrapper .send_message {\n    width: 140px;\n    height: 50px;\n    display: inline-block;\n    border-radius: 50px;\n    background-color: #a3d063;\n    border: 2px solid #a3d063;\n    color: #fff;\n    cursor: pointer;\n    -webkit-transition: all 0.2s linear;\n    transition: all 0.2s linear;\n    text-align: center;\n    float: right;\n}\n.bottom_wrapper .send_message:hover {\n    color: #a3d063;\n    background-color: #fff;\n}\n.bottom_wrapper .send_message .text {\n    font-size: 18px;\n    font-weight: 300;\n    display: inline-block;\n    line-height: 48px;\n}\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 59 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
+  Modified by Evan You @yyx990803
+*/
+
+var hasDocument = typeof document !== 'undefined'
+
+if (typeof DEBUG !== 'undefined' && DEBUG) {
+  if (!hasDocument) {
+    throw new Error(
+    'vue-style-loader cannot be used in a non-browser environment. ' +
+    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
+  ) }
+}
+
+var listToStyles = __webpack_require__(60)
+
+/*
+type StyleObject = {
+  id: number;
+  parts: Array<StyleObjectPart>
+}
+
+type StyleObjectPart = {
+  css: string;
+  media: string;
+  sourceMap: ?string
+}
+*/
+
+var stylesInDom = {/*
+  [id: number]: {
+    id: number,
+    refs: number,
+    parts: Array<(obj?: StyleObjectPart) => void>
+  }
+*/}
+
+var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
+var singletonElement = null
+var singletonCounter = 0
+var isProduction = false
+var noop = function () {}
+
+// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
+// tags it will allow on a page
+var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
+
+module.exports = function (parentId, list, _isProduction) {
+  isProduction = _isProduction
+
+  var styles = listToStyles(parentId, list)
+  addStylesToDom(styles)
+
+  return function update (newList) {
+    var mayRemove = []
+    for (var i = 0; i < styles.length; i++) {
+      var item = styles[i]
+      var domStyle = stylesInDom[item.id]
+      domStyle.refs--
+      mayRemove.push(domStyle)
+    }
+    if (newList) {
+      styles = listToStyles(parentId, newList)
+      addStylesToDom(styles)
+    } else {
+      styles = []
+    }
+    for (var i = 0; i < mayRemove.length; i++) {
+      var domStyle = mayRemove[i]
+      if (domStyle.refs === 0) {
+        for (var j = 0; j < domStyle.parts.length; j++) {
+          domStyle.parts[j]()
+        }
+        delete stylesInDom[domStyle.id]
+      }
+    }
+  }
+}
+
+function addStylesToDom (styles /* Array<StyleObject> */) {
+  for (var i = 0; i < styles.length; i++) {
+    var item = styles[i]
+    var domStyle = stylesInDom[item.id]
+    if (domStyle) {
+      domStyle.refs++
+      for (var j = 0; j < domStyle.parts.length; j++) {
+        domStyle.parts[j](item.parts[j])
+      }
+      for (; j < item.parts.length; j++) {
+        domStyle.parts.push(addStyle(item.parts[j]))
+      }
+      if (domStyle.parts.length > item.parts.length) {
+        domStyle.parts.length = item.parts.length
+      }
+    } else {
+      var parts = []
+      for (var j = 0; j < item.parts.length; j++) {
+        parts.push(addStyle(item.parts[j]))
+      }
+      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
+    }
+  }
+}
+
+function createStyleElement () {
+  var styleElement = document.createElement('style')
+  styleElement.type = 'text/css'
+  head.appendChild(styleElement)
+  return styleElement
+}
+
+function addStyle (obj /* StyleObjectPart */) {
+  var update, remove
+  var styleElement = document.querySelector('style[data-vue-ssr-id~="' + obj.id + '"]')
+
+  if (styleElement) {
+    if (isProduction) {
+      // has SSR styles and in production mode.
+      // simply do nothing.
+      return noop
+    } else {
+      // has SSR styles but in dev mode.
+      // for some reason Chrome can't handle source map in server-rendered
+      // style tags - source maps in <style> only works if the style tag is
+      // created and inserted dynamically. So we remove the server rendered
+      // styles and inject new ones.
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  if (isOldIE) {
+    // use singleton mode for IE9.
+    var styleIndex = singletonCounter++
+    styleElement = singletonElement || (singletonElement = createStyleElement())
+    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
+    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
+  } else {
+    // use multi-style-tag mode in all other cases
+    styleElement = createStyleElement()
+    update = applyToTag.bind(null, styleElement)
+    remove = function () {
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  update(obj)
+
+  return function updateStyle (newObj /* StyleObjectPart */) {
+    if (newObj) {
+      if (newObj.css === obj.css &&
+          newObj.media === obj.media &&
+          newObj.sourceMap === obj.sourceMap) {
+        return
+      }
+      update(obj = newObj)
+    } else {
+      remove()
+    }
+  }
+}
+
+var replaceText = (function () {
+  var textStore = []
+
+  return function (index, replacement) {
+    textStore[index] = replacement
+    return textStore.filter(Boolean).join('\n')
+  }
+})()
+
+function applyToSingletonTag (styleElement, index, remove, obj) {
+  var css = remove ? '' : obj.css
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = replaceText(index, css)
+  } else {
+    var cssNode = document.createTextNode(css)
+    var childNodes = styleElement.childNodes
+    if (childNodes[index]) styleElement.removeChild(childNodes[index])
+    if (childNodes.length) {
+      styleElement.insertBefore(cssNode, childNodes[index])
+    } else {
+      styleElement.appendChild(cssNode)
+    }
+  }
+}
+
+function applyToTag (styleElement, obj) {
+  var css = obj.css
+  var media = obj.media
+  var sourceMap = obj.sourceMap
+
+  if (media) {
+    styleElement.setAttribute('media', media)
+  }
+
+  if (sourceMap) {
+    // https://developer.chrome.com/devtools/docs/javascript-debugging
+    // this makes source maps inside style tags work properly in Chrome
+    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
+    // http://stackoverflow.com/a/26603875
+    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
+  }
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = css
+  } else {
+    while (styleElement.firstChild) {
+      styleElement.removeChild(styleElement.firstChild)
+    }
+    styleElement.appendChild(document.createTextNode(css))
+  }
+}
+
+
+/***/ }),
+/* 60 */
+/***/ (function(module, exports) {
+
+/**
+ * Translates the list format produced by css-loader into something
+ * easier to manipulate.
+ */
+module.exports = function listToStyles (parentId, list) {
+  var styles = []
+  var newStyles = {}
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i]
+    var id = item[0]
+    var css = item[1]
+    var media = item[2]
+    var sourceMap = item[3]
+    var part = {
+      id: parentId + ':' + i,
+      css: css,
+      media: media,
+      sourceMap: sourceMap
+    }
+    if (!newStyles[id]) {
+      styles.push(newStyles[id] = { id: id, parts: [part] })
+    } else {
+      newStyles[id].parts.push(part)
+    }
+  }
+  return styles
+}
+
 
 /***/ })
 /******/ ]);
